@@ -1,13 +1,13 @@
 /**
  * UwbManagerHelper 클래스는 UWB(Ultra-Wideband) 통신을 관리하는 헬퍼 클래스입니다.
  * 이 클래스는 UWB 장치의 검색, 연결, 거리 측정 등의 기능을 제공합니다.
- * 
+ * <p>
  * 주요 기능:
  * 1. UWB 장치 연결 및 연결 해제
  * 2. 거리 측정 시작 및 중지
  * 3. UWB 프로파일 및 역할 관리
  * 4. 거리 측정 결과 처리
- * 
+ * <p>
  * 사용 방법:
  * 1. UwbManagerHelper 인스턴스 생성
  * 2. 리스너 등록 (registerListener)
@@ -51,40 +51,11 @@ import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.subscribers.DisposableSubscriber;
 
 public class UwbManagerHelper {
-    /**
-     * Controlee 역할 상수 - UWB 통신에서 수동적 역할을 나타냄
-     */
-    private static final int CONTROLEE_ROLE = 1;
-    
-    /**
-     * Controller 역할 상수 - UWB 통신에서 주도적 역할을 나타냄
-     */
-    private static final int CONTROLLER_ROLE = 0;
-    
-    /**
-     * 기본 UWB 폰 역할 - 기본적으로 Controlee 역할을 사용
-     */
-    private static final int PREFERRED_UWB_PHONE_ROLE = 1;
-    
-    /**
-     * 기본 UWB 프로파일 ID - 기본 프로파일 식별자
-     */
-    private static final int PREFERRED_UWB_PROFILE_ID = 1;
     
     /**
      * 로그 태그 - 디버깅 및 로깅에 사용되는 식별자
      */
     private static final String TAG = "UwbManagerHelper";
-    
-    /**
-     * 기본 UWB 채널 - 기본 통신 채널
-     */
-    private static final int UWB_CHANNEL = 9;
-    
-    /**
-     * 기본 UWB 프리앰블 인덱스 - 기본 프리앰블 식별자
-     */
-    private static final int UWB_PREAMBLE_INDEX = 10;
     
     /**
      * UWB 역할 매핑 - 역할 문자열을 숫자로 매핑

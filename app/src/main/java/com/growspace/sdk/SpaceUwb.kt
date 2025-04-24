@@ -12,7 +12,6 @@ import com.growspace.sdk.logger.LoggerHelper
 import com.growspace.sdk.model.UwbDisconnect
 import com.growspace.sdk.model.UwbRange
 import com.growspace.sdk.permissions.PermissionHelper
-import com.growspace.sdk.storage.database.DatabaseStorageHelper
 import com.growspace.sdk.storage.preferences.PreferenceStorageHelper
 import com.growspace.sdk.uwb.UwbManagerHelper
 import kotlinx.coroutines.CoroutineScope
@@ -44,7 +43,6 @@ class SpaceUwb(
     private val uWBController: UWBController = UWBController(
         PermissionHelper(activity),          // 권한 관리
         PreferenceStorageHelper(context),    // 설정 저장
-        DatabaseStorageHelper(context),      // 데이터베이스 저장
         LoggerHelper(context),               // 로깅
         BluetoothLEManagerHelper(context),   // 블루투스 LE 관리
         LocationManagerHelper(context),      // 위치 관리

@@ -49,7 +49,6 @@ import com.growspace.sdk.utils.Utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -102,7 +101,7 @@ public class BluetoothLEManagerHelper {
          * 
          * @param i 스캔 결과 코드
          * @param scanResult 스캔 결과 객체, 발견된 BLE 장치의 정보를 포함
-         * 
+         * <p>
          * 처리 과정:
          * 1. BLUETOOTH_CONNECT 권한 확인
          * 2. 장치 이름과 주소 추출
@@ -126,7 +125,7 @@ public class BluetoothLEManagerHelper {
          * @param bluetoothGatt GATT 클라이언트 객체
          * @param i 상태 코드 (0: 성공, 그 외: 오류)
          * @param i2 연결 상태 (0: 연결 해제, 2: 연결됨)
-         * 
+         * <p>
          * 처리 과정:
          * 1. 상태 코드 확인 (오류 발생 시 연결 종료)
          * 2. 연결 상태 확인
@@ -163,7 +162,7 @@ public class BluetoothLEManagerHelper {
          * 
          * @param bluetoothGatt GATT 클라이언트 객체
          * @param i 상태 코드 (0: 성공, 그 외: 오류)
-         * 
+         * <p>
          * 처리 과정:
          * 1. 서비스 검색 상태 확인
          * 2. 특성 검색 및 설정
@@ -189,7 +188,7 @@ public class BluetoothLEManagerHelper {
          * @param bluetoothGatt GATT 클라이언트 객체
          * @param bluetoothGattCharacteristic 변경된 특성
          * @param data 수신된 데이터
-         * 
+         * <p>
          * 처리 과정:
          * 1. 수신된 데이터 확인
          * 2. 데이터 처리 및 리스너에 전달

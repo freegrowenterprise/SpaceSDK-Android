@@ -2,14 +2,14 @@
  * UWBController 클래스는 UWB(Ultra-Wideband) 통신의 핵심 컨트롤러 클래스입니다.
  * 이 클래스는 블루투스 LE, UWB, 위치 서비스 등의 통합 관리를 담당하며,
  * 장치 검색, 연결, 거리 측정 등의 기능을 제공합니다.
- * 
+ *
  * 주요 기능:
  * 1. 블루투스 LE 장치 검색 및 연결 관리
  * 2. UWB 거리 측정 세션 관리
  * 3. 위치 서비스 상태 모니터링
  * 4. 액세서리 연결 및 데이터 전송 관리
  * 5. 거리 기반 알림 처리
- * 
+ *
  * 사용 방법:
  * 1. UWBController 인스턴스 생성
  * 2. onCreate() 호출하여 초기화
@@ -45,7 +45,6 @@ import com.growspace.sdk.oob.model.UwbPhoneConfigData;
 import com.growspace.sdk.location.LocationManagerHelper;
 import com.growspace.sdk.uwb.UwbManagerHelper;
 
-import com.growspace.sdk.storage.database.DatabaseStorageHelper;
 import com.growspace.sdk.storage.preferences.PreferenceStorageHelper;
 
 
@@ -82,19 +81,19 @@ public class UWBController implements
      * 5초 동안 연결이 되지 않으면 타임아웃 처리
      */
     private static final int BLE_CONNECT_TIMEOUT_MSECS = 5000;
-    
+
     /**
      * 로그 데모 이름
      * 로깅 시 사용되는 데모 식별자
      */
     private static final String LOG_DEMONAME = "DistanceAlert";
-    
+
     /**
      * 최대 허용 액세서리 수
      * 동시에 연결할 수 있는 최대 액세서리 수
      */
     private static final int MAX_ALLOWED_ACCESSORIES = 5;
-    
+
     /**
      * 로그 태그
      * 로깅 시 사용되는 태그 식별자
@@ -106,80 +105,74 @@ public class UWBController implements
      * 블루투스 LE 장치 검색, 연결, 데이터 전송 등을 관리
      */
     private final BluetoothLEManagerHelper mBluetoothLEManagerHelper;
-    
-    /**
-     * 데이터베이스 저장소 헬퍼
-     * 액세서리 정보 등의 영구 저장소 관리
-     */
-    private final DatabaseStorageHelper mDatabaseStorageHelper;
-    
+
     /**
      * 근접 범위 임계값
      * 액세서리가 이 거리 이내로 접근하면 근접 상태로 판단
      */
     private int mLimitCloseRangeThreshold;
-    
+
     /**
      * 원거리 범위 임계값
      * 액세서리가 이 거리 이상으로 멀어지면 원거리 상태로 판단
      */
     private int mLimitFarRangeThreshold;
-    
+
     /**
      * 위치 관리자 헬퍼
      * 위치 서비스 상태 및 권한 관리
      */
     private final LocationManagerHelper mLocationManagerHelper;
-    
+
     /**
      * 로거 헬퍼
      * 로깅 관련 기능 제공
      */
     private final LoggerHelper mLoggerHelper;
-    
+
     /**
      * 권한 관리 헬퍼
      * 필요한 권한 확인 및 요청 관리
      */
     private final PermissionHelper mPermissionHelper;
-    
+
     /**
      * 설정 저장소 헬퍼
      * 앱 설정값 관리
      */
     private final PreferenceStorageHelper mPreferenceStorageHelper;
-    
+
     /**
      * UWB 관리자 헬퍼
      * UWB 거리 측정 세션 관리
      */
     private final UwbManagerHelper mUwbManagerHelper;
-    
+
     /**
      * 저장된 인스턴스 상태
      * 액티비티 상태 저장 및 복원에 사용
      */
     private Bundle mSavedInstanceState = null;
     // private List<DistanceAlertRecyclerItem> mDistanceAlertItemList = new ArrayList();
-    
+
     /**
      * 연결된 액세서리 목록
      * 현재 연결된 모든 액세서리 정보 관리
      */
     private List<Accessory> mAccessoriesList = new ArrayList();
-    
+
     /**
      * 연결 중인 액세서리 목록
      * 현재 연결 시도 중인 액세서리 정보 관리
      */
     private List<Accessory> mAccessoriesConnectingList = new ArrayList();
-    
+
     /**
      * 블루투스 LE 연결 타이머 목록
      * 각 액세서리의 연결 타임아웃 관리
      */
     private HashMap<String, Timer> mTimerAccessoriesConnectList = new HashMap<>();
-    
+
     /**
      * 레거시 OoB 지원 타이머 목록
      * 레거시 장치 지원을 위한 타임아웃 관리
@@ -196,7 +189,7 @@ public class UWBController implements
      * 새로운 거리 측정 결과가 도착할 때 호출되는 콜백
      */
     private Function1<? super UwbRange, Unit> onUpdate;
-    
+
     /**
      * UWB 연결 해제 콜백
      * 연결이 해제될 때 호출되는 콜백
@@ -221,23 +214,21 @@ public class UWBController implements
     /**
      * UWBController 생성자
      * 필요한 모든 헬퍼 클래스들을 초기화합니다.
-     * 
+     *
      * @param permissionHelper 권한 관리 헬퍼
      * @param preferenceStorageHelper 설정 저장소 헬퍼
-     * @param databaseStorageHelper 데이터베이스 저장소 헬퍼
      * @param loggerHelper 로거 헬퍼
      * @param bluetoothLEManagerHelper 블루투스 LE 관리자 헬퍼
      * @param locationManagerHelper 위치 관리자 헬퍼
      * @param uwbManagerHelper UWB 관리자 헬퍼
      */
     public UWBController(
-            PermissionHelper permissionHelper, PreferenceStorageHelper preferenceStorageHelper, DatabaseStorageHelper databaseStorageHelper,
+            PermissionHelper permissionHelper, PreferenceStorageHelper preferenceStorageHelper,
             LoggerHelper loggerHelper,
             BluetoothLEManagerHelper bluetoothLEManagerHelper, LocationManagerHelper locationManagerHelper, UwbManagerHelper uwbManagerHelper
     ) {
         this.mPermissionHelper = permissionHelper;
         this.mPreferenceStorageHelper = preferenceStorageHelper;
-        this.mDatabaseStorageHelper = databaseStorageHelper;
         this.mLoggerHelper = loggerHelper;
         this.mBluetoothLEManagerHelper = bluetoothLEManagerHelper;
         this.mLocationManagerHelper = locationManagerHelper;
@@ -247,7 +238,7 @@ public class UWBController implements
     /**
      * 컨트롤러 초기화 메서드
      * 필요한 설정을 적용하고 리스너를 등록합니다.
-     * 
+     *
      * 처리 단계:
      * 1. 로그 데모 이름 설정
      * 2. 저장된 상태 복원 (있는 경우)
@@ -273,13 +264,13 @@ public class UWBController implements
 
     /**
      * UWB 거리 측정을 시작하는 메서드
-     * 
+     *
      * @param maximumConnectionCount 최대 연결 가능한 장치 수
      * @param replacementDistanceThreshold 연결 해제 거리 임계값
      * @param isConnectStrongestSignalFirst 강한 신호 장치 우선 연결 여부
      * @param onUpdate 거리 측정 결과 콜백
      * @param onDisconnect 연결 해제 콜백
-     * 
+     *
      * 처리 단계:
      * 1. 블루투스 LE 장치 스캔 시작
      * 2. 로그 이벤트 기록
@@ -312,9 +303,9 @@ public class UWBController implements
 
     /**
      * UWB 거리 측정을 중지하는 메서드
-     * 
+     *
      * @return 중지 성공 여부
-     * 
+     *
      * 처리 단계:
      * 1. 로그 이벤트 기록
      * 2. 콜백 함수 초기화
@@ -346,7 +337,7 @@ public class UWBController implements
     /**
      * 컨트롤러 종료 메서드
      * 모든 리소스를 정리하고 연결을 해제합니다.
-     * 
+     *
      * 처리 단계:
      * 1. 리스너 등록 해제
      * 2. 블루투스 LE 연결 종료
@@ -371,9 +362,9 @@ public class UWBController implements
 
     /**
      * 위치 서비스 상태 변경 콜백
-     * 
+     *
      * @param z 위치 서비스 활성화 여부
-     * 
+     *
      * 처리 단계:
      * 1. 위치 서비스 활성화 시:
      *    - 블루투스 LE 장치 스캔 시작
@@ -400,9 +391,9 @@ public class UWBController implements
 
     /**
      * 블루투스 LE 상태 변경 콜백
-     * 
+     *
      * @param i 블루투스 LE 상태 코드
-     * 
+     *
      * 처리 단계:
      * 1. 상태 코드 12 (활성화) 시:
      *    - 블루투스 LE 장치 스캔 시작
@@ -429,10 +420,8 @@ public class UWBController implements
 
     @Override
     public void onBluetoothLEDeviceBonded(String str, String str2) {
-        Accessory accessory = this.mDatabaseStorageHelper.getAccessory(str2);
-        if (accessory == null) {
-            accessory = new Accessory(str, str2, null);
-        }
+        Accessory accessory = new Accessory(str, str2, null);
+
         for (Accessory value : this.mAccessoriesList) {
             if (accessory.getMac().equals(value.getMac())) {
                 return;
@@ -453,10 +442,7 @@ public class UWBController implements
         if (str == null || str.isEmpty() || str2 == null || str2.isEmpty()) {
             return;
         }
-        Accessory accessory = this.mDatabaseStorageHelper.getAccessory(str2);
-        if (accessory == null) {
-            accessory = new Accessory(str, str2, null);
-        }
+        Accessory accessory = new Accessory(str, str2, null);
         for (Accessory value : this.mAccessoriesList) {
             if (accessory.getMac().equals(value.getMac())) {
                 return;
@@ -523,10 +509,10 @@ public class UWBController implements
 
     /**
      * 블루투스 LE 데이터 수신 처리 메서드
-     * 
+     *
      * @param str 액세서리의 MAC 주소
      * @param bArr 수신된 데이터
-     * 
+     *
      * 처리 단계:
      * 1. 액세서리 찾기
      * 2. 메시지 ID 확인
@@ -572,10 +558,10 @@ public class UWBController implements
 
     /**
      * UWB 거리 측정 결과 처리 메서드
-     * 
+     *
      * @param str 액세서리의 MAC 주소
      * @param rangingResult 거리 측정 결과
-     * 
+     *
      * 처리 단계:
      * 1. 액세서리 찾기
      * 2. 결과 타입에 따른 처리:
@@ -643,9 +629,9 @@ public class UWBController implements
 
     /**
      * UWB 거리 측정 오류 처리 메서드
-     * 
+     *
      * @param th 발생한 오류
-     * 
+     *
      * 처리 단계:
      * 1. 모든 연결 해제
      * 2. 리소스 정리
@@ -668,9 +654,9 @@ public class UWBController implements
 
     /**
      * 필요한 권한 확인 메서드
-     * 
+     *
      * @return 모든 권한이 있는지 여부
-     * 
+     *
      * 처리 단계:
      * 1. 각 권한 확인
      * 2. 로그 기록
@@ -686,18 +672,18 @@ public class UWBController implements
         Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.ACCESS_FINE_LOCATION"));
         Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.UWB_RANGING"));
 
-        return this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH") && 
-               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_ADMIN") && 
-               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_SCAN") && 
-               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_CONNECT") && 
-               this.mPermissionHelper.hasPermission("android.permission.ACCESS_COARSE_LOCATION") && 
-               this.mPermissionHelper.hasPermission("android.permission.ACCESS_FINE_LOCATION") && 
+        return this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH") &&
+               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_ADMIN") &&
+               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_SCAN") &&
+               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_CONNECT") &&
+               this.mPermissionHelper.hasPermission("android.permission.ACCESS_COARSE_LOCATION") &&
+               this.mPermissionHelper.hasPermission("android.permission.ACCESS_FINE_LOCATION") &&
                this.mPermissionHelper.hasPermission("android.permission.UWB_RANGING");
     }
 
     /**
      * 설정 적용 메서드
-     * 
+     *
      * 처리 단계:
      * 1. 로그 활성화 설정
      * 2. UWB 채널 설정
@@ -779,11 +765,11 @@ public class UWBController implements
 
     /**
      * UWB 거리 측정 시작 메서드
-     * 
+     *
      * @param accessory 거리 측정을 시작할 액세서리
      * @param bArr UWB 장치 설정 데이터
      * @return 시작 성공 여부
-     * 
+     *
      * 처리 단계:
      * 1. 로그 기록
      * 2. UWB 장치 설정 데이터 파싱
@@ -800,10 +786,10 @@ public class UWBController implements
 
     /**
      * UWB 거리 측정 중지 메서드
-     * 
+     *
      * @param accessory 거리 측정을 중지할 액세서리
      * @return 중지 성공 여부
-     * 
+     *
      * 처리 단계:
      * 1. 로그 기록
      * 2. UWB 거리 측정 중지
@@ -815,9 +801,9 @@ public class UWBController implements
 
     /**
      * UWB 거리 측정 세션 시작 처리 메서드
-     * 
+     *
      * @param accessory 거리 측정을 시작한 액세서리
-     * 
+     *
      * 처리 단계:
      * 1. 로그 기록
      * 2. 거리 측정 시작 이벤트 로깅
@@ -829,9 +815,9 @@ public class UWBController implements
 
     /**
      * UWB 거리 측정 세션 중지 처리 메서드
-     * 
+     *
      * @param accessory 거리 측정을 중지한 액세서리
-     * 
+     *
      * 처리 단계:
      * 1. 로그 기록
      * 2. 거리 측정 중지 이벤트 로깅
