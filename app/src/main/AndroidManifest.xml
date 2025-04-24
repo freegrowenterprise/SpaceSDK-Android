@@ -33,7 +33,6 @@
         <package android:name="androidx.core.uwb.backend"/>
         <package android:name="com.google.ar.core"/>
     </queries>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
     <application
         android:allowBackup="true"
@@ -44,7 +43,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.GrowSpaceSDKAndroid"
-        tools:targetApi="34"
         />
 
 </manifest>

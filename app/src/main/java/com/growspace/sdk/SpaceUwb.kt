@@ -81,6 +81,8 @@ class SpaceUwb(
                 onDisconnect
             )
         }
+
+        uwbJob?.start()
     }
 
     private fun stopUwbRanging(onComplete: ((Result<Unit>) -> Unit)? = null) {

@@ -476,6 +476,15 @@ public class UWBController implements
     }
 
     private boolean checkPermissions() {
+        Log.d(TAG, "checkPermissions: ");
+        Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH"));
+        Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_ADMIN"));
+        Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_SCAN"));
+        Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_CONNECT"));
+        Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.ACCESS_COARSE_LOCATION"));
+        Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.ACCESS_FINE_LOCATION"));
+        Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.UWB_RANGING"));
+
         return this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH") && this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_ADMIN") && this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_SCAN") && this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_CONNECT") && this.mPermissionHelper.hasPermission("android.permission.ACCESS_COARSE_LOCATION") && this.mPermissionHelper.hasPermission("android.permission.ACCESS_FINE_LOCATION") && this.mPermissionHelper.hasPermission("android.permission.UWB_RANGING");
     }
 
