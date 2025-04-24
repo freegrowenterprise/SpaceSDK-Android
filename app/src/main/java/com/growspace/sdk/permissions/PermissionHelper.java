@@ -7,8 +7,6 @@ import androidx.core.app.ActivityCompat;
 
 import com.growspace.sdk.BaseObservable;
 
-import java.util.Iterator;
-
 public class PermissionHelper extends BaseObservable<PermissionHelper.Listener> {
     private final Activity mActivity;
 

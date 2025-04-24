@@ -16,10 +16,10 @@ public class PreferenceStorageHelper {
     private static final int DEFAULT_UWBCONFIGTYPE = 1;
     private static final int DEFAULT_UWBPREAMBLEINDEX = 10;
     private static final String DEFAULT_UWBROLE = "Controlee";
-    private static final String PREFS_NAME_APP = "MK_UWB_CONNECT_APP_SHARED_PREFERENCES";
-    private static final String PREFS_NAME_DISTANCEALERT = "MK_UWB_CONNECT_DISTANCEALERT_SHARED_PREFERENCES";
-    private static final String PREFS_NAME_POINTANDTRIGGER = "MK_UWB_CONNECT_POINTANDTRIGGER_SHARED_PREFERENCES";
-    private static final String PREFS_NAME_UWB = "MK_UWB_CONNECT_UWB_SHARED_PREFERENCES";
+    private static final String PREFS_NAME_APP = "UWB_CONNECT_APP_SHARED_PREFERENCES";
+    private static final String PREFS_NAME_DISTANCEALERT = "UWB_CONNECT_DISTANCEALERT_SHARED_PREFERENCES";
+    private static final String PREFS_NAME_POINTANDTRIGGER = "UWB_CONNECT_POINTANDTRIGGER_SHARED_PREFERENCES";
+    private static final String PREFS_NAME_UWB = "UWB_CONNECT_UWB_SHARED_PREFERENCES";
     private static final String PREF_DISTANCEALERTCLOSERANGETHRESHOLD_KEY = "DISTANCEALERTCLOSERANGETHRESHOLD_KEY";
     private static final String PREF_DISTANCEALERTFARRANGETHRESHOLD_KEY = "DISTANCEALERTFARRANGETHRESHOLD_KEY";
     private static final String PREF_LOGSENABLED_KEY = "LOGSENABLED_KEY";
@@ -32,7 +32,7 @@ public class PreferenceStorageHelper {
     private static final String PREF_UWBCONFIGTYPE_KEY = "UWBCONFIGTYPE_KEY";
     private static final String PREF_UWBPREAMBLEINDEX_KEY = "UWBPREAMBLEINDEX_KEY";
     private static final String PREF_UWBROLE_KEY = "UWBROLE_KEY";
-    private Context mContext;
+    private final Context mContext;
 
     public PreferenceStorageHelper(Context context) {
         this.mContext = context;

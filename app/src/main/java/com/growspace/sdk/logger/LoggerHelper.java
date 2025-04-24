@@ -6,6 +6,9 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
 
 import java.io.FileNotFoundException;
 import java.io.OutputStream;
@@ -24,20 +27,7 @@ public class LoggerHelper {
     private String demoName = "Default";
 
     public enum LogEvent {
-        LOG_EVENT_DEMO_START("DEMO_START"),
-        LOG_EVENT_DEMO_STOP("DEMO_STOP"),
-        LOG_EVENT_DEMO_FINISHED("DEMO_FINISHED"),
-        LOG_EVENT_BLE_SCAN_START("BLE_SCAN_START"),
-        LOG_EVENT_BLE_SCAN_STOP("BLE_SCAN_STOP"),
-        LOG_EVENT_BLE_DEV_SCANNED("BLE_DEV_SCANNED"),
-        LOG_EVENT_BLE_DEV_CONNECTING("BLE_DEV_CONNECTING"),
-        LOG_EVENT_BLE_DEV_CONNECTED("BLE_DEV_CONNECTED"),
-        LOG_EVENT_BLE_DEV_DISCONNECTED("BLE_DEV_DISCONNECTED"),
-        LOG_EVENT_UWB_RANGING_START("UWB_RANGING_START"),
-        LOG_EVENT_UWB_RANGING_RESULT("UWB_RANGING_RESULT"),
-        LOG_EVENT_UWB_RANGING_ERROR("UWB_RANGING_ERROR"),
-        LOG_EVENT_UWB_RANGING_PEER_DISCONNECTED("UWB_RANGING_PEER_DISCONNECTED"),
-        LOG_EVENT_UWB_RANGING_STOP("UWB_RANGING_STOP");
+        LOG_EVENT_DEMO_START("DEMO_START"), LOG_EVENT_DEMO_STOP("DEMO_STOP"), LOG_EVENT_DEMO_FINISHED("DEMO_FINISHED"), LOG_EVENT_BLE_SCAN_START("BLE_SCAN_START"), LOG_EVENT_BLE_SCAN_STOP("BLE_SCAN_STOP"), LOG_EVENT_BLE_DEV_SCANNED("BLE_DEV_SCANNED"), LOG_EVENT_BLE_DEV_CONNECTING("BLE_DEV_CONNECTING"), LOG_EVENT_BLE_DEV_CONNECTED("BLE_DEV_CONNECTED"), LOG_EVENT_BLE_DEV_DISCONNECTED("BLE_DEV_DISCONNECTED"), LOG_EVENT_UWB_RANGING_START("UWB_RANGING_START"), LOG_EVENT_UWB_RANGING_RESULT("UWB_RANGING_RESULT"), LOG_EVENT_UWB_RANGING_ERROR("UWB_RANGING_ERROR"), LOG_EVENT_UWB_RANGING_PEER_DISCONNECTED("UWB_RANGING_PEER_DISCONNECTED"), LOG_EVENT_UWB_RANGING_STOP("UWB_RANGING_STOP");
 
         private final String event;
 
@@ -45,6 +35,7 @@ public class LoggerHelper {
             this.event = str;
         }
 
+        @NonNull
         @Override
         public String toString() {
             return this.event;
@@ -104,15 +95,21 @@ public class LoggerHelper {
             String concat = logsHeader.concat(readLogs());
             try {
                 OutputStream openOutputStream = contentResolver.openOutputStream(insert);
-                openOutputStream.write(concat.getBytes());
-                openOutputStream.close();
+                if (openOutputStream == null) {
+                    Log.e("LoggerHelper", "Failed to open output stream for TXT export");
+                } else {
+                    openOutputStream.write(concat.getBytes());
+                    openOutputStream.close();
+                }
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e("LoggerHelper", "Error writing TXT file: " + e.getMessage());
             }
         }
         contentValues.clear();
         contentValues.put("is_pending", (Integer) 0);
-        contentResolver.update(insert, contentValues, null, null);
+        if (insert != null) {
+            contentResolver.update(insert, contentValues, null, null);
+        }
     }
 
     public void exportLogsCsv() throws FileNotFoundException {
@@ -127,15 +124,21 @@ public class LoggerHelper {
             String convertToCsv = convertToCsv(logsHeader.concat(readLogs()));
             try {
                 OutputStream openOutputStream = contentResolver.openOutputStream(insert);
-                openOutputStream.write(convertToCsv.getBytes());
-                openOutputStream.close();
+                if (openOutputStream == null) {
+                    Log.e("LoggerHelper", "Failed to open output stream for CSV export");
+                } else {
+                    openOutputStream.write(convertToCsv.getBytes());
+                    openOutputStream.close();
+                }
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e("LoggerHelper", "Error writing CSV file: " + e.getMessage());
             }
         }
         contentValues.clear();
         contentValues.put("is_pending", (Integer) 0);
-        contentResolver.update(insert, contentValues, null, null);
+        if (insert != null) {
+            contentResolver.update(insert, contentValues, null, null);
+        }
     }
 
     public void clearLogs() {
@@ -149,7 +152,7 @@ public class LoggerHelper {
             outputStreamWriter.write("\n");
             outputStreamWriter.close();
         } catch (Exception e) {
-            e.printStackTrace();
+            Log.e("LoggerHelper", "Error writing file: " + e.getMessage());
         }
     }
 
@@ -160,18 +163,16 @@ public class LoggerHelper {
         if (i > 0) {
             try {
                 Scanner scanner = new Scanner(this.mContext.openFileInput(logsfileName));
-                i2 = 0;
                 while (scanner.hasNextLine()) {
                     scanner.nextLine();
                     i2++;
                 }
                 scanner.close();
             } catch (Exception e) {
-                e.printStackTrace();
+                Log.e("LoggerHelper", "Error reading file: " + e.getMessage());
             }
-        } else {
-            i2 = 0;
         }
+
         Scanner scanner2 = new Scanner(this.mContext.openFileInput(logsfileName));
         while (scanner2.hasNextLine()) {
             String nextLine = scanner2.nextLine();

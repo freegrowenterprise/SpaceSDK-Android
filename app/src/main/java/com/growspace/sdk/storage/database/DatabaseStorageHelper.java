@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DatabaseStorageHelper {
-    private DatabaseStorage mDatabaseStorage;
+    private final DatabaseStorage mDatabaseStorage;
     private SQLiteDatabase mSQLiteDatabase;
 
     public DatabaseStorageHelper(Context context) {
@@ -40,7 +40,7 @@ public class DatabaseStorageHelper {
     }
 
     public List<Accessory> getAccessories() {
-        ArrayList arrayList = new ArrayList();
+        ArrayList<Accessory> arrayList = new ArrayList<>();
         openReadableDatabase();
         Cursor rawQuery = this.mSQLiteDatabase.rawQuery("SELECT * FROM ACCESSORY", null);
         while (rawQuery.moveToNext()) {

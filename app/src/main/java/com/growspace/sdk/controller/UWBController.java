@@ -1,15 +1,36 @@
+/**
+ * UWBController 클래스는 UWB(Ultra-Wideband) 통신의 핵심 컨트롤러 클래스입니다.
+ * 이 클래스는 블루투스 LE, UWB, 위치 서비스 등의 통합 관리를 담당하며,
+ * 장치 검색, 연결, 거리 측정 등의 기능을 제공합니다.
+ * 
+ * 주요 기능:
+ * 1. 블루투스 LE 장치 검색 및 연결 관리
+ * 2. UWB 거리 측정 세션 관리
+ * 3. 위치 서비스 상태 모니터링
+ * 4. 액세서리 연결 및 데이터 전송 관리
+ * 5. 거리 기반 알림 처리
+ * 
+ * 사용 방법:
+ * 1. UWBController 인스턴스 생성
+ * 2. onCreate() 호출하여 초기화
+ * 3. onStart() 호출하여 서비스 시작
+ * 4. 거리 측정 결과 수신 (onUpdate 콜백)
+ * 5. 연결 해제 이벤트 수신 (onDisconnect 콜백)
+ * 6. onStop() 호출하여 서비스 중지
+ * 7. onDestroy() 호출하여 리소스 정리
+ */
 package com.growspace.sdk.controller;
 
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
 
 import androidx.core.uwb.RangingCapabilities;
 import androidx.core.uwb.RangingResult;
 
+import com.growspace.sdk.model.DisconnectType;
 import com.growspace.sdk.model.UwbDisconnect;
 import com.growspace.sdk.model.UwbRange;
 import com.growspace.sdk.permissions.PermissionHelper;
@@ -50,47 +71,119 @@ import java.util.TimerTask;
 import kotlin.Unit;
 import kotlin.jvm.functions.Function1;
 
+/**
+ * UWBController는 블루투스 LE, UWB, 위치 서비스의 리스너를 구현하여
+ * 각 서비스의 상태 변화와 이벤트를 처리합니다.
+ */
 public class UWBController implements
-//        DistanceAlertView.Listener, DistanceAlertItemView.Listener, DialogsEventBus.Listener,
         BluetoothLEManagerHelper.Listener, UwbManagerHelper.Listener, LocationManagerHelper.Listener {
+    /**
+     * 블루투스 LE 연결 타임아웃 시간 (밀리초)
+     * 5초 동안 연결이 되지 않으면 타임아웃 처리
+     */
     private static final int BLE_CONNECT_TIMEOUT_MSECS = 5000;
-    private static final String DIALOGTAG_BLUETOOTHNOTENABLED = "DIALOGTAG_BLUETOOTHNOTENABLED";
-    private static final String DIALOGTAG_BLUETOOTHNOTSUPPORTED = "DIALOGTAG_BLUETOOTHNOTSUPPORTED";
-    private static final String DIALOGTAG_CONFIRMCLOSEDEMO = "DIALOGTAG_CONFIRMCLOSEDEMO";
-    private static final String DIALOGTAG_EDITACCESSORYNAME = "DIALOGTAG_EDITACCESSORYNAME";
-    private static final String DIALOGTAG_EDITTHRESHOLDS = "DIALOGTAG_EDITTHRESHOLDS";
-    private static final String DIALOGTAG_LOCATIONNOTENABLED = "DIALOGTAG_LOCATIONNOTENABLED";
-    private static final String DIALOGTAG_LOCATIONNOTSUPPORTED = "DIALOGTAG_LOCATIONNOTSUPPORTED";
-    private static final String DIALOGTAG_PAIRINGINFO = "DIALOGTAG_PAIRINGINFO";
-    private static final String DIALOGTAG_REQUIREDPERMISSIONSMISSING = "DIALOGTAG_REQUIREDPERMISSIONSMISSING";
-    private static final String DIALOGTAG_UWBNOTENABLED = "DIALOGTAG_UWBNOTENABLED";
-    private static final String DIALOGTAG_UWBNOTSUPPORTED = "DIALOGTAG_UWBNOTSUPPORTED";
-    private static final int LEGACY_OoB_SUPPORT_TIMEOUT_MSECS = 2000;
+    
+    /**
+     * 로그 데모 이름
+     * 로깅 시 사용되는 데모 식별자
+     */
     private static final String LOG_DEMONAME = "DistanceAlert";
+    
+    /**
+     * 최대 허용 액세서리 수
+     * 동시에 연결할 수 있는 최대 액세서리 수
+     */
     private static final int MAX_ALLOWED_ACCESSORIES = 5;
-    private static final String SAVED_STATE_SCREEN_STATE = "SAVED_STATE_SCREEN_STATE";
+    
+    /**
+     * 로그 태그
+     * 로깅 시 사용되는 태그 식별자
+     */
     private static final String TAG = "DistanceAlertController";
-    //    private final ActionHelper mActionHelper;
+
+    /**
+     * 블루투스 LE 관리자 헬퍼
+     * 블루투스 LE 장치 검색, 연결, 데이터 전송 등을 관리
+     */
     private final BluetoothLEManagerHelper mBluetoothLEManagerHelper;
+    
+    /**
+     * 데이터베이스 저장소 헬퍼
+     * 액세서리 정보 등의 영구 저장소 관리
+     */
     private final DatabaseStorageHelper mDatabaseStorageHelper;
-    //    private final DialogsEventBus mDialogsEventBus;
-//    private final DialogsManager mDialogsManager;
+    
+    /**
+     * 근접 범위 임계값
+     * 액세서리가 이 거리 이내로 접근하면 근접 상태로 판단
+     */
     private int mLimitCloseRangeThreshold;
+    
+    /**
+     * 원거리 범위 임계값
+     * 액세서리가 이 거리 이상으로 멀어지면 원거리 상태로 판단
+     */
     private int mLimitFarRangeThreshold;
+    
+    /**
+     * 위치 관리자 헬퍼
+     * 위치 서비스 상태 및 권한 관리
+     */
     private final LocationManagerHelper mLocationManagerHelper;
+    
+    /**
+     * 로거 헬퍼
+     * 로깅 관련 기능 제공
+     */
     private final LoggerHelper mLoggerHelper;
-    private Menu mMenu;
+    
+    /**
+     * 권한 관리 헬퍼
+     * 필요한 권한 확인 및 요청 관리
+     */
     private final PermissionHelper mPermissionHelper;
+    
+    /**
+     * 설정 저장소 헬퍼
+     * 앱 설정값 관리
+     */
     private final PreferenceStorageHelper mPreferenceStorageHelper;
-    //    private final ScreensNavigator mScreensNavigator;
-//    private final ToastsHelper mToastsHelper;
+    
+    /**
+     * UWB 관리자 헬퍼
+     * UWB 거리 측정 세션 관리
+     */
     private final UwbManagerHelper mUwbManagerHelper;
-    //    private DistanceAlertView mView;
+    
+    /**
+     * 저장된 인스턴스 상태
+     * 액티비티 상태 저장 및 복원에 사용
+     */
     private Bundle mSavedInstanceState = null;
-    //    private List<DistanceAlertRecyclerItem> mDistanceAlertItemList = new ArrayList();
+    // private List<DistanceAlertRecyclerItem> mDistanceAlertItemList = new ArrayList();
+    
+    /**
+     * 연결된 액세서리 목록
+     * 현재 연결된 모든 액세서리 정보 관리
+     */
     private List<Accessory> mAccessoriesList = new ArrayList();
+    
+    /**
+     * 연결 중인 액세서리 목록
+     * 현재 연결 시도 중인 액세서리 정보 관리
+     */
     private List<Accessory> mAccessoriesConnectingList = new ArrayList();
+    
+    /**
+     * 블루투스 LE 연결 타이머 목록
+     * 각 액세서리의 연결 타임아웃 관리
+     */
     private HashMap<String, Timer> mTimerAccessoriesConnectList = new HashMap<>();
+    
+    /**
+     * 레거시 OoB 지원 타이머 목록
+     * 레거시 장치 지원을 위한 타임아웃 관리
+     */
     private HashMap<String, Timer> mTimerAccessoriesLegacyOoBSupportList = new HashMap<>();
 //    private ScreenState mScreenState = ScreenState.SCREEN_SHOWN;
 
@@ -98,53 +191,70 @@ public class UWBController implements
 //        SCREEN_SHOWN, CONFIRMCLOSEDEMO_DIALOG_SHOWN, PAIRINGINFO_DIALOG_SHOWN, DISTANCEALERTDEMO_RUNNING, REQUIREDPERMISSIONSMISSING_DIALOG_SHOWN, BLUETOOTHNOTSUPPORTED_DIALOG_SHOWN, UWBNOTSUPPORTED_DIALOG_SHOWN, LOCATIONNOTSUPPORTED_DIALOG_SHOWN, BLUETOOTHNOTENABLED_DIALOG_SHOWN, UWBNOTENABLED_DIALOG_SHOWN, LOCATIONNOTENABLED_DIALOG_SHOWN, EDITACCESSORYNAME_DIALOG_SHOWN, EDITTHRESHOLDS_DIALOG_SHOWN
 //    }
 
+    /**
+     * 거리 측정 결과 콜백
+     * 새로운 거리 측정 결과가 도착할 때 호출되는 콜백
+     */
     private Function1<? super UwbRange, Unit> onUpdate;
+    
+    /**
+     * UWB 연결 해제 콜백
+     * 연결이 해제될 때 호출되는 콜백
+     */
     private Function1<? super UwbDisconnect, Unit> onDisconnect;
 
+    /**
+     * UWB 거리 측정 기능 정보를 받는 콜백 메서드
+     * @param rangingCapabilities UWB 거리 측정 기능 정보
+     */
     @Override
     public void onRangingCapabilities(RangingCapabilities rangingCapabilities) {
     }
 
+    /**
+     * UWB 거리 측정이 완료되었을 때 호출되는 콜백 메서드
+     */
     @Override
     public void onRangingComplete() {
     }
 
+    /**
+     * UWBController 생성자
+     * 필요한 모든 헬퍼 클래스들을 초기화합니다.
+     * 
+     * @param permissionHelper 권한 관리 헬퍼
+     * @param preferenceStorageHelper 설정 저장소 헬퍼
+     * @param databaseStorageHelper 데이터베이스 저장소 헬퍼
+     * @param loggerHelper 로거 헬퍼
+     * @param bluetoothLEManagerHelper 블루투스 LE 관리자 헬퍼
+     * @param locationManagerHelper 위치 관리자 헬퍼
+     * @param uwbManagerHelper UWB 관리자 헬퍼
+     */
     public UWBController(
-//            ScreensNavigator screensNavigator,
             PermissionHelper permissionHelper, PreferenceStorageHelper preferenceStorageHelper, DatabaseStorageHelper databaseStorageHelper,
-//            ActionHelper actionHelper,
             LoggerHelper loggerHelper,
-//            ToastsHelper toastsHelper,
             BluetoothLEManagerHelper bluetoothLEManagerHelper, LocationManagerHelper locationManagerHelper, UwbManagerHelper uwbManagerHelper
-//            DialogsManager dialogsManager, DialogsEventBus dialogsEventBus
     ) {
-//        this.mScreensNavigator = screensNavigator;
         this.mPermissionHelper = permissionHelper;
         this.mPreferenceStorageHelper = preferenceStorageHelper;
         this.mDatabaseStorageHelper = databaseStorageHelper;
-//        this.mActionHelper = actionHelper;
         this.mLoggerHelper = loggerHelper;
-//        this.mToastsHelper = toastsHelper;
         this.mBluetoothLEManagerHelper = bluetoothLEManagerHelper;
         this.mLocationManagerHelper = locationManagerHelper;
         this.mUwbManagerHelper = uwbManagerHelper;
-//        this.mDialogsManager = dialogsManager;
-//        this.mDialogsEventBus = dialogsEventBus;
     }
 
-//    public void bindView(DistanceAlertView distanceAlertView) {
-//        this.mView = distanceAlertView;
-//    }
-
-    public void setInstanceState(Bundle bundle) {
-        this.mSavedInstanceState = bundle;
-    }
-
-//    public Bundle saveInstanceState(Bundle bundle) {
-//        bundle.putSerializable(SAVED_STATE_SCREEN_STATE, this.mScreenState);
-//        return bundle;
-//    }
-
+    /**
+     * 컨트롤러 초기화 메서드
+     * 필요한 설정을 적용하고 리스너를 등록합니다.
+     * 
+     * 처리 단계:
+     * 1. 로그 데모 이름 설정
+     * 2. 저장된 상태 복원 (있는 경우)
+     * 3. 설정 적용
+     * 4. 거리 임계값 설정
+     * 5. 리스너 등록
+     */
     public void onCreate() {
         this.mLoggerHelper.setDemoName(LOG_DEMONAME);
 //        Bundle bundle = this.mSavedInstanceState;
@@ -161,6 +271,20 @@ public class UWBController implements
         this.mUwbManagerHelper.registerListener(this);
     }
 
+    /**
+     * UWB 거리 측정을 시작하는 메서드
+     * 
+     * @param maximumConnectionCount 최대 연결 가능한 장치 수
+     * @param replacementDistanceThreshold 연결 해제 거리 임계값
+     * @param isConnectStrongestSignalFirst 강한 신호 장치 우선 연결 여부
+     * @param onUpdate 거리 측정 결과 콜백
+     * @param onDisconnect 연결 해제 콜백
+     * 
+     * 처리 단계:
+     * 1. 블루투스 LE 장치 스캔 시작
+     * 2. 로그 이벤트 기록
+     * 3. 콜백 함수 설정
+     */
     public void onStart(
             ///  장치 최대 연결 개수. 디폴트 값 4.
             int maximumConnectionCount,
@@ -186,6 +310,16 @@ public class UWBController implements
         this.onDisconnect = onDisconnect;
     }
 
+    /**
+     * UWB 거리 측정을 중지하는 메서드
+     * 
+     * @return 중지 성공 여부
+     * 
+     * 처리 단계:
+     * 1. 로그 이벤트 기록
+     * 2. 콜백 함수 초기화
+     * 3. 블루투스 LE 장치 스캔 중지
+     */
     public boolean onStop() {
 //        this.mView.unregisterListener(this);
 //        this.mDialogsEventBus.unregisterListener(this);
@@ -197,6 +331,7 @@ public class UWBController implements
         return bleStopDeviceScan();
     }
 
+
 //    @Override
 //    public void onBackPressed() {
 //        if (this.mAccessoriesList.size() > 0) {
@@ -207,6 +342,18 @@ public class UWBController implements
 //        }
 //    }
 
+
+    /**
+     * 컨트롤러 종료 메서드
+     * 모든 리소스를 정리하고 연결을 해제합니다.
+     * 
+     * 처리 단계:
+     * 1. 리스너 등록 해제
+     * 2. 블루투스 LE 연결 종료
+     * 3. UWB 연결 종료
+     * 4. 타이머 취소
+     * 5. 로그 이벤트 기록
+     */
     public void onDestroy() {
         this.mBluetoothLEManagerHelper.unregisterListener();
         this.mLocationManagerHelper.unregisterListener();
@@ -218,29 +365,25 @@ public class UWBController implements
         log(LoggerHelper.LogEvent.LOG_EVENT_DEMO_FINISHED);
     }
 
-    public void onCreateOptionsMenu(Menu menu) {
-        this.mMenu = menu;
-//        this.mView.bindMenu(menu);
-    }
-
     public void onOptionsItemSelected(MenuItem menuItem) {
 //        this.mView.onMenuItemSelected(menuItem);
     }
 
-//    @Override
-//    public void onMenuSettingsClicked() {
-//        showEditDistanceAlertThresholdsDialog();
-//    }
-
-//    @Override
-//    public void onAccessoryEditClicked(Accessory accessory) {
-//        showEditAccessoryAliasDialog(accessory);
-//    }
-
+    /**
+     * 위치 서비스 상태 변경 콜백
+     * 
+     * @param z 위치 서비스 활성화 여부
+     * 
+     * 처리 단계:
+     * 1. 위치 서비스 활성화 시:
+     *    - 블루투스 LE 장치 스캔 시작
+     * 2. 위치 서비스 비활성화 시:
+     *    - 모든 연결 해제
+     *    - 리소스 정리
+     */
     @Override
     public void onLocationStateChanged(boolean z) {
         if (z) {
-//            startDistanceAlertDemo();
             bleStartDeviceScan();
             return;
         }
@@ -253,15 +396,24 @@ public class UWBController implements
         cancelTimerAccessoriesLegacyOoBSupport();
         this.mAccessoriesList.clear();
         this.mAccessoriesConnectingList.clear();
-//        initializeRecyclerItemList();
-//        updateDistanceAlertView();
-//        this.mScreenState = ScreenState.SCREEN_SHOWN;
     }
 
+    /**
+     * 블루투스 LE 상태 변경 콜백
+     * 
+     * @param i 블루투스 LE 상태 코드
+     * 
+     * 처리 단계:
+     * 1. 상태 코드 12 (활성화) 시:
+     *    - 블루투스 LE 장치 스캔 시작
+     * 2. 상태 코드 10 (비활성화) 시:
+     *    - 모든 연결 해제
+     *    - 리소스 정리
+     *    - 스캔 재시작
+     */
     @Override
     public void onBluetoothLEStateChanged(int i) {
         if (i == 12) {
-//            startDistanceAlertDemo();
             bleStartDeviceScan();
         }
         if (i == 10) {
@@ -271,10 +423,7 @@ public class UWBController implements
             cancelTimerAccessoriesLegacyOoBSupport();
             this.mAccessoriesList.clear();
             this.mAccessoriesConnectingList.clear();
-//            initializeRecyclerItemList();
             bleStartDeviceScan();
-//            updateDistanceAlertView();
-//            this.mScreenState = ScreenState.SCREEN_SHOWN;
         }
     }
 
@@ -365,9 +514,27 @@ public class UWBController implements
 //            }
 //        }
 //        updateDistanceAlertView();
-        showConnectionLostToast(accessoryFromBluetoothLeAddress);
+
+        if (onDisconnect != null) {
+            UwbDisconnect uwbDisconnect = new UwbDisconnect(DisconnectType.DISCONNECTED_DUE_TO_SYSTEM, accessoryFromBluetoothLeAddress.getName());
+            onDisconnect.invoke(uwbDisconnect);
+        }
     }
 
+    /**
+     * 블루투스 LE 데이터 수신 처리 메서드
+     * 
+     * @param str 액세서리의 MAC 주소
+     * @param bArr 수신된 데이터
+     * 
+     * 처리 단계:
+     * 1. 액세서리 찾기
+     * 2. 메시지 ID 확인
+     * 3. 메시지 타입에 따른 처리:
+     *    - UWB 장치 설정 데이터: 거리 측정 시작
+     *    - UWB 시작/중지: 세션 상태 업데이트
+     *    - 기타: 잘못된 데이터 처리
+     */
     @Override
     public void onBluetoothLEDataReceived(String str, byte[] bArr) {
         Accessory accessoryFromBluetoothLeAddress = getAccessoryFromBluetoothLeAddress(str);
@@ -403,9 +570,20 @@ public class UWBController implements
         }
     }
 
+    /**
+     * UWB 거리 측정 결과 처리 메서드
+     * 
+     * @param str 액세서리의 MAC 주소
+     * @param rangingResult 거리 측정 결과
+     * 
+     * 처리 단계:
+     * 1. 액세서리 찾기
+     * 2. 결과 타입에 따른 처리:
+     *    - 위치 결과: 거리 및 각도 정보 처리
+     *    - 연결 해제: 리소스 정리 및 콜백 호출
+     */
     @Override
     public void onRangingResult(String str, RangingResult rangingResult) {
-        byte b;
         Accessory accessoryFromBluetoothLeAddress = getAccessoryFromBluetoothLeAddress(str);
         if (accessoryFromBluetoothLeAddress == null) {
             Log.e(TAG, "Unexpected Bluetooth LE address");
@@ -419,17 +597,17 @@ public class UWBController implements
             float value = rangingResultPosition.getPosition().getDistance().getValue();
             float value2 = rangingResultPosition.getPosition().getAzimuth().getValue();
             if (rangingResultPosition.getPosition().getElevation() != null) {
-                log(LoggerHelper.LogEvent.LOG_EVENT_UWB_RANGING_RESULT, accessoryFromBluetoothLeAddress, String.valueOf((int) (value * 100.0f)), String.valueOf((int) value2), String.valueOf((int) rangingResultPosition.getPosition().getElevation().getValue()));
+                log(accessoryFromBluetoothLeAddress, String.valueOf((int) (value * 100.0f)), String.valueOf((int) value2), String.valueOf((int) rangingResultPosition.getPosition().getElevation().getValue()));
             } else {
-                log(LoggerHelper.LogEvent.LOG_EVENT_UWB_RANGING_RESULT, accessoryFromBluetoothLeAddress, String.valueOf((int) (value * 100.0f)), String.valueOf((int) value2), "");
+                log(accessoryFromBluetoothLeAddress, String.valueOf((int) (value * 100.0f)), String.valueOf((int) value2), "");
             }
             int i = (int) (value * 100.0f);
+            byte b;
             if (i <= this.mLimitCloseRangeThreshold) {
                 b = 2;
             } else {
                 b = i >= this.mLimitFarRangeThreshold ? (byte) 0 : (byte) 1;
             }
-
 
             if (onUpdate != null) {
                 UwbRange uwbRange = new UwbRange(accessoryFromBluetoothLeAddress.getName(), value, value2, rangingResultPosition.getPosition().getElevation() != null ? rangingResultPosition.getPosition().getElevation().getValue() : null);
@@ -456,10 +634,23 @@ public class UWBController implements
 //                }
 //            }
 //            updateDistanceAlertView();
-            showConnectionLostToast(accessoryFromBluetoothLeAddress);
+            if (onDisconnect != null) {
+                UwbDisconnect uwbDisconnect = new UwbDisconnect(DisconnectType.DISCONNECTED_DUE_TO_SYSTEM, accessoryFromBluetoothLeAddress.getName());
+                onDisconnect.invoke(uwbDisconnect);
+            }
         }
     }
 
+    /**
+     * UWB 거리 측정 오류 처리 메서드
+     * 
+     * @param th 발생한 오류
+     * 
+     * 처리 단계:
+     * 1. 모든 연결 해제
+     * 2. 리소스 정리
+     * 3. 로그 이벤트 기록
+     */
     @Override
     public void onRangingError(final Throwable th) {
         bleClose();
@@ -475,6 +666,16 @@ public class UWBController implements
 //        new Handler(Looper.getMainLooper()).post(() -> UWBController.this.m179x73423059(th));
     }
 
+    /**
+     * 필요한 권한 확인 메서드
+     * 
+     * @return 모든 권한이 있는지 여부
+     * 
+     * 처리 단계:
+     * 1. 각 권한 확인
+     * 2. 로그 기록
+     * 3. 모든 권한 존재 여부 반환
+     */
     private boolean checkPermissions() {
         Log.d(TAG, "checkPermissions: ");
         Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH"));
@@ -485,9 +686,25 @@ public class UWBController implements
         Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.ACCESS_FINE_LOCATION"));
         Log.d(TAG, "checkPermissions: " + this.mPermissionHelper.hasPermission("android.permission.UWB_RANGING"));
 
-        return this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH") && this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_ADMIN") && this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_SCAN") && this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_CONNECT") && this.mPermissionHelper.hasPermission("android.permission.ACCESS_COARSE_LOCATION") && this.mPermissionHelper.hasPermission("android.permission.ACCESS_FINE_LOCATION") && this.mPermissionHelper.hasPermission("android.permission.UWB_RANGING");
+        return this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH") && 
+               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_ADMIN") && 
+               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_SCAN") && 
+               this.mPermissionHelper.hasPermission("android.permission.BLUETOOTH_CONNECT") && 
+               this.mPermissionHelper.hasPermission("android.permission.ACCESS_COARSE_LOCATION") && 
+               this.mPermissionHelper.hasPermission("android.permission.ACCESS_FINE_LOCATION") && 
+               this.mPermissionHelper.hasPermission("android.permission.UWB_RANGING");
     }
 
+    /**
+     * 설정 적용 메서드
+     * 
+     * 처리 단계:
+     * 1. 로그 활성화 설정
+     * 2. UWB 채널 설정
+     * 3. UWB 프리앰블 인덱스 설정
+     * 4. UWB 역할 설정
+     * 5. UWB 프로파일 ID 설정
+     */
     private void applySettings() {
         this.mLoggerHelper.setLogsEnabled(this.mPreferenceStorageHelper.getLogsEnabled());
         this.mUwbManagerHelper.setUwbChannel(this.mPreferenceStorageHelper.getUwbChannel());
@@ -531,40 +748,8 @@ public class UWBController implements
 
     private boolean bleStartDeviceScan() {
         if (!checkPermissions()) {
-//            this.mScreenState = ScreenState.REQUIREDPERMISSIONSMISSING_DIALOG_SHOWN;
-//            this.mDialogsManager.showRequiredPermissionsMissingDialog(DIALOGTAG_REQUIREDPERMISSIONSMISSING);
             return false;
         }
-//        if (!this.mBluetoothLEManagerHelper.isSupported()) {
-//            this.mScreenState = ScreenState.BLUETOOTHNOTSUPPORTED_DIALOG_SHOWN;
-//            this.mDialogsManager.showBluetoothNotSupportedDialog(DIALOGTAG_BLUETOOTHNOTSUPPORTED);
-//            return false;
-//        }
-//        if (!this.mUwbManagerHelper.isSupported()) {
-//            this.mScreenState = ScreenState.UWBNOTSUPPORTED_DIALOG_SHOWN;
-//            this.mDialogsManager.showUwbNotSupportedDialog(DIALOGTAG_UWBNOTSUPPORTED);
-//            return false;
-//        }
-//        if (!this.mLocationManagerHelper.isSupported()) {
-//            this.mScreenState = ScreenState.LOCATIONNOTSUPPORTED_DIALOG_SHOWN;
-//            this.mDialogsManager.showLocationNotSupportedDialog(DIALOGTAG_LOCATIONNOTSUPPORTED);
-//            return false;
-//        }
-//        if (!this.mBluetoothLEManagerHelper.isEnabled()) {
-//            this.mScreenState = ScreenState.BLUETOOTHNOTENABLED_DIALOG_SHOWN;
-//            this.mDialogsManager.showBluetoothNotEnabledDialog(DIALOGTAG_BLUETOOTHNOTENABLED);
-//            return false;
-//        }
-//        if (!this.mUwbManagerHelper.isEnabled()) {
-//            this.mScreenState = ScreenState.UWBNOTENABLED_DIALOG_SHOWN;
-//            this.mDialogsManager.showUwbNotEnabledDialog(DIALOGTAG_UWBNOTENABLED);
-//            return false;
-//        }
-//        if (!this.mLocationManagerHelper.isEnabled()) {
-//            this.mScreenState = ScreenState.LOCATIONNOTENABLED_DIALOG_SHOWN;
-//            this.mDialogsManager.showLocationNotEnabledDialog(DIALOGTAG_LOCATIONNOTENABLED);
-//            return false;
-//        }
         log(LoggerHelper.LogEvent.LOG_EVENT_BLE_SCAN_START);
         return this.mBluetoothLEManagerHelper.startLeDeviceScan();
     }
@@ -592,6 +777,18 @@ public class UWBController implements
         return this.mBluetoothLEManagerHelper.transmit(accessory.getMac(), OoBHelper.buildOoBMessage(OoBHelper.MessageId.stop.getMessageId()));
     }
 
+    /**
+     * UWB 거리 측정 시작 메서드
+     * 
+     * @param accessory 거리 측정을 시작할 액세서리
+     * @param bArr UWB 장치 설정 데이터
+     * @return 시작 성공 여부
+     * 
+     * 처리 단계:
+     * 1. 로그 기록
+     * 2. UWB 장치 설정 데이터 파싱
+     * 3. UWB 거리 측정 시작
+     */
     private boolean startRanging(Accessory accessory, byte[] bArr) {
         Log.d(TAG, "Start ranging with accessory: " + accessory.getMac());
         UwbDeviceConfigData fromByteArray = UwbDeviceConfigData.fromByteArray(bArr);
@@ -601,16 +798,44 @@ public class UWBController implements
         return false;
     }
 
+    /**
+     * UWB 거리 측정 중지 메서드
+     * 
+     * @param accessory 거리 측정을 중지할 액세서리
+     * @return 중지 성공 여부
+     * 
+     * 처리 단계:
+     * 1. 로그 기록
+     * 2. UWB 거리 측정 중지
+     */
     private boolean stopRanging(Accessory accessory) {
         Log.d(TAG, "Stop ranging with accessory: " + accessory.getMac());
         return this.mUwbManagerHelper.stopRanging(accessory.getMac());
     }
 
+    /**
+     * UWB 거리 측정 세션 시작 처리 메서드
+     * 
+     * @param accessory 거리 측정을 시작한 액세서리
+     * 
+     * 처리 단계:
+     * 1. 로그 기록
+     * 2. 거리 측정 시작 이벤트 로깅
+     */
     private void uwbRangingSessionStarted(Accessory accessory) {
         Log.d(TAG, "Ranging started with accessory: " + accessory.getMac());
         log(LoggerHelper.LogEvent.LOG_EVENT_UWB_RANGING_START);
     }
 
+    /**
+     * UWB 거리 측정 세션 중지 처리 메서드
+     * 
+     * @param accessory 거리 측정을 중지한 액세서리
+     * 
+     * 처리 단계:
+     * 1. 로그 기록
+     * 2. 거리 측정 중지 이벤트 로깅
+     */
     private void uwbRangingSessionStopped(Accessory accessory) {
         Log.d(TAG, "Ranging stopped with accessory: " + accessory.getMac());
         log(LoggerHelper.LogEvent.LOG_EVENT_UWB_RANGING_STOP);
@@ -768,21 +993,6 @@ public class UWBController implements
 //        this.mDialogsManager.showEditAccessoryAliasDialog(DIALOGTAG_EDITACCESSORYNAME, accessory);
 //    }
 
-    private void showConnectionLostToast(final Accessory accessory) {
-        if (accessory != null) {
-            // java.lang.Runnable
-            new Handler(Looper.getMainLooper()).post(() -> UWBController.this.callShowConnectionLostToast(accessory));
-        }
-    }
-
-    void callShowConnectionLostToast(Accessory accessory) {
-//        if (accessory.getAlias() != null && !accessory.getAlias().isEmpty()) {
-//            this.mToastsHelper.notifyGenericMessage("Connection lost with accessory: " + accessory.getAlias());
-//        } else {
-//            this.mToastsHelper.notifyGenericMessage("Connection lost with accessory: " + accessory.getName());
-//        }
-    }
-
 //    private void updateDistanceAlertView() {
 //        new Handler(Looper.getMainLooper()).post(() -> UWBController.this.mView.update());
 //    }
@@ -817,192 +1027,11 @@ public class UWBController implements
         }
     }
 
-    private void log(LoggerHelper.LogEvent logEvent, Accessory accessory, String str, String str2, String str3) {
+    private void log(Accessory accessory, String str, String str2, String str3) {
         if (accessory.getAlias() == null || accessory.getAlias().isEmpty()) {
-            this.mLoggerHelper.log(logEvent.toString(), accessory.getName(), accessory.getMac(), str, str2, str3);
+            this.mLoggerHelper.log(LoggerHelper.LogEvent.LOG_EVENT_UWB_RANGING_RESULT.toString(), accessory.getName(), accessory.getMac(), str, str2, str3);
         } else {
-            this.mLoggerHelper.log(logEvent.toString(), accessory.getAlias(), accessory.getMac(), str, str2, str3);
+            this.mLoggerHelper.log(LoggerHelper.LogEvent.LOG_EVENT_UWB_RANGING_RESULT.toString(), accessory.getAlias(), accessory.getMac(), str, str2, str3);
         }
     }
-
-//    @Override
-//    public void onDialogEvent(Object obj) {
-//        if (obj instanceof EditAccessoryAliasDialogEvent) {
-//            EditAccessoryAliasDialogEvent editAccessoryAliasDialogEvent = (EditAccessoryAliasDialogEvent) obj;
-//            if (AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$editaccessorynamedialog$EditAccessoryAliasDialogEvent$Button[editAccessoryAliasDialogEvent.getClickedButton().ordinal()] != 1) {
-//                return;
-//            }
-//            Accessory accessory = editAccessoryAliasDialogEvent.getAccessory();
-//            String accessoryAlias = editAccessoryAliasDialogEvent.getAccessoryAlias();
-//            if (accessoryAlias == null || accessoryAlias.isEmpty()) {
-//                this.mToastsHelper.notifyGenericMessage("Invalid alias!");
-//                return;
-//            }
-//            accessory.setAlias(accessoryAlias);
-//            if (this.mDatabaseStorageHelper.getAccessory(accessory.getMac()) == null) {
-//                this.mDatabaseStorageHelper.insertAccessory(accessory);
-//            } else {
-//                this.mDatabaseStorageHelper.updateAccessoryAlias(accessory, accessoryAlias);
-//            }
-//            Iterator<Accessory> it = this.mAccessoriesList.iterator();
-//            int i = 0;
-//            while (it.hasNext()) {
-//                if (accessory.getMac().equals(it.next().getMac())) {
-//                    this.mAccessoriesList.set(i, accessory);
-//                    return;
-//                }
-//                i++;
-//            }
-//            return;
-//        }
-//        if (obj instanceof EditDistanceAlertThresholdsDialogEvent) {
-//            EditDistanceAlertThresholdsDialogEvent editDistanceAlertThresholdsDialogEvent = (EditDistanceAlertThresholdsDialogEvent) obj;
-//            if (AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$dialogs$editdistancealertthresholdsdialog$EditDistanceAlertThresholdsDialogEvent$Button[editDistanceAlertThresholdsDialogEvent.getClickedButton().ordinal()] != 1) {
-//                return;
-//            }
-//            int closeRangeThreshold = editDistanceAlertThresholdsDialogEvent.getCloseRangeThreshold();
-//            int farRangeThreshold = editDistanceAlertThresholdsDialogEvent.getFarRangeThreshold();
-//            if (closeRangeThreshold > 0 && farRangeThreshold > 0 && farRangeThreshold > closeRangeThreshold) {
-//                this.mLimitCloseRangeThreshold = closeRangeThreshold;
-//                this.mLimitFarRangeThreshold = farRangeThreshold;
-//                this.mPreferenceStorageHelper.setDistanceAlertCloseRangeThreshold(closeRangeThreshold);
-//                this.mPreferenceStorageHelper.setDistanceAlertFarRangeThreshold(farRangeThreshold);
-//                initializeRecyclerItemList();
-//                updateDistanceAlertView();
-//                return;
-//            }
-//            this.mToastsHelper.notifyGenericMessage("Invalid thresholds!");
-//            return;
-//        }
-//        if (obj instanceof PromptDialogEvent) {
-//            switch (AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[this.mScreenState.ordinal()]) {
-//                case 1:
-//                case 2:
-//                case 3:
-//                    this.mScreenState = ScreenState.SCREEN_SHOWN;
-//                    break;
-//                case 4:
-//                    if (AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$promptdialog$PromptDialogEvent$Button[((PromptDialogEvent) obj).getClickedButton().ordinal()] == 1) {
-//                        this.mActionHelper.enableBluetooth();
-//                        break;
-//                    } else {
-//                        this.mScreenState = ScreenState.SCREEN_SHOWN;
-//                        break;
-//                    }
-//                case 5:
-//                    if (AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$promptdialog$PromptDialogEvent$Button[((PromptDialogEvent) obj).getClickedButton().ordinal()] == 1) {
-//                        this.mActionHelper.enableLocation();
-//                        break;
-//                    } else {
-//                        this.mScreenState = ScreenState.SCREEN_SHOWN;
-//                        break;
-//                    }
-//                case 6:
-//                    if (AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$promptdialog$PromptDialogEvent$Button[((PromptDialogEvent) obj).getClickedButton().ordinal()] == 1) {
-//                        this.mActionHelper.enableUwb();
-//                        break;
-//                    } else {
-//                        this.mScreenState = ScreenState.SCREEN_SHOWN;
-//                        break;
-//                    }
-//                case 7:
-//                    if (AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$promptdialog$PromptDialogEvent$Button[((PromptDialogEvent) obj).getClickedButton().ordinal()] == 1) {
-//                        this.mScreensNavigator.toSelectDemoMenu();
-//                        break;
-//                    } else {
-//                        this.mScreenState = ScreenState.SCREEN_SHOWN;
-//                        break;
-//                    }
-//            }
-//        }
-//        if ((obj instanceof InfoDoNotShowAgainDialogEvent) && AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[this.mScreenState.ordinal()] == 8) {
-//            InfoDoNotShowAgainDialogEvent infoDoNotShowAgainDialogEvent = (InfoDoNotShowAgainDialogEvent) obj;
-//            if (AnonymousClass5.$SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$infodonotshowagaindialog$InfoDoNotShowAgainDialogEvent$Button[infoDoNotShowAgainDialogEvent.getClickedButton().ordinal()] == 1) {
-//                this.mPreferenceStorageHelper.setShowPairingInfo(infoDoNotShowAgainDialogEvent.getShowInfo());
-//            }
-//            startDistanceAlertDemo();
-//        }
-//    }
-
-
-//    static class AnonymousClass5 {
-//        static final int[] $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$editaccessorynamedialog$EditAccessoryAliasDialogEvent$Button;
-//        static final int[] $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$infodonotshowagaindialog$InfoDoNotShowAgainDialogEvent$Button;
-//        static final int[] $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$promptdialog$PromptDialogEvent$Button;
-//        static final int[] $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState;
-//        static final int[] $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$dialogs$editdistancealertthresholdsdialog$EditDistanceAlertThresholdsDialogEvent$Button;
-//
-//        static {
-//            int[] iArr = new int[InfoDoNotShowAgainDialogEvent.Button.values().length];
-//            $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$infodonotshowagaindialog$InfoDoNotShowAgainDialogEvent$Button = iArr;
-//            try {
-//                iArr[InfoDoNotShowAgainDialogEvent.Button.ACCEPT.ordinal()] = 1;
-//            } catch (NoSuchFieldError unused) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$infodonotshowagaindialog$InfoDoNotShowAgainDialogEvent$Button[InfoDoNotShowAgainDialogEvent.Button.CANCEL.ordinal()] = 2;
-//            } catch (NoSuchFieldError unused2) {
-//            }
-//            int[] iArr2 = new int[ScreenState.values().length];
-//            $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState = iArr2;
-//            try {
-//                iArr2[ScreenState.BLUETOOTHNOTSUPPORTED_DIALOG_SHOWN.ordinal()] = 1;
-//            } catch (NoSuchFieldError unused3) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[ScreenState.UWBNOTSUPPORTED_DIALOG_SHOWN.ordinal()] = 2;
-//            } catch (NoSuchFieldError unused4) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[ScreenState.LOCATIONNOTSUPPORTED_DIALOG_SHOWN.ordinal()] = 3;
-//            } catch (NoSuchFieldError unused5) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[ScreenState.BLUETOOTHNOTENABLED_DIALOG_SHOWN.ordinal()] = 4;
-//            } catch (NoSuchFieldError unused6) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[ScreenState.LOCATIONNOTENABLED_DIALOG_SHOWN.ordinal()] = 5;
-//            } catch (NoSuchFieldError unused7) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[ScreenState.UWBNOTENABLED_DIALOG_SHOWN.ordinal()] = 6;
-//            } catch (NoSuchFieldError unused8) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[ScreenState.CONFIRMCLOSEDEMO_DIALOG_SHOWN.ordinal()] = 7;
-//            } catch (NoSuchFieldError unused9) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$UWBController$ScreenState[ScreenState.PAIRINGINFO_DIALOG_SHOWN.ordinal()] = 8;
-//            } catch (NoSuchFieldError unused10) {
-//            }
-//            int[] iArr3 = new int[PromptDialogEvent.Button.values().length];
-//            $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$promptdialog$PromptDialogEvent$Button = iArr3;
-//            try {
-//                iArr3[PromptDialogEvent.Button.POSITIVE.ordinal()] = 1;
-//            } catch (NoSuchFieldError unused11) {
-//            }
-//            int[] iArr4 = new int[EditDistanceAlertThresholdsDialogEvent.Button.values().length];
-//            $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$dialogs$editdistancealertthresholdsdialog$EditDistanceAlertThresholdsDialogEvent$Button = iArr4;
-//            try {
-//                iArr4[EditDistanceAlertThresholdsDialogEvent.Button.EDIT.ordinal()] = 1;
-//            } catch (NoSuchFieldError unused12) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$distancealert$dialogs$editdistancealertthresholdsdialog$EditDistanceAlertThresholdsDialogEvent$Button[EditDistanceAlertThresholdsDialogEvent.Button.CANCEL.ordinal()] = 2;
-//            } catch (NoSuchFieldError unused13) {
-//            }
-//            int[] iArr5 = new int[EditAccessoryAliasDialogEvent.Button.values().length];
-//            $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$editaccessorynamedialog$EditAccessoryAliasDialogEvent$Button = iArr5;
-//            try {
-//                iArr5[EditAccessoryAliasDialogEvent.Button.EDIT.ordinal()] = 1;
-//            } catch (NoSuchFieldError unused14) {
-//            }
-//            try {
-//                $SwitchMap$com$themobileknowledge$uwbconnectapp$screens$common$dialogs$editaccessorynamedialog$EditAccessoryAliasDialogEvent$Button[EditAccessoryAliasDialogEvent.Button.CANCEL.ordinal()] = 2;
-//            } catch (NoSuchFieldError unused15) {
-//            }
-//        }
-//    }
 }

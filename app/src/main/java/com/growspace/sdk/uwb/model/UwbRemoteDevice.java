@@ -4,7 +4,6 @@ import androidx.core.uwb.UwbDevice;
 
 import io.reactivex.rxjava3.disposables.Disposable;
 
-/* loaded from: classes2.dex */
 public class UwbRemoteDevice {
     private Disposable disposable;
     private UwbDevice uwbDevice;
