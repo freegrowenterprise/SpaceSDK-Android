@@ -171,7 +171,7 @@ public class UWBController implements
      * 블루투스 LE 연결 타이머 목록
      * 각 액세서리의 연결 타임아웃 관리
      */
-    private HashMap<String, Timer> mTimerAccessoriesConnectList = new HashMap<>();
+    private final HashMap<String, Timer> mTimerAccessoriesConnectList = new HashMap<>();
 
     /**
      * 레거시 OoB 지원 타이머 목록
@@ -307,19 +307,36 @@ public class UWBController implements
      * @return 중지 성공 여부
      *
      * 처리 단계:
-     * 1. 로그 이벤트 기록
-     * 2. 콜백 함수 초기화
-     * 3. 블루투스 LE 장치 스캔 중지
+     * 1. 블루투스 LE 장치 스캔 중지
+     * 2. 로그 이벤트 기록
+     * 3. 연결 해제 콜백 함수 초기화
+     * 4. 연결된 액세서리 목록 순회하여 로그 기록
+     * 5. 블루투스 LE 및 UWB 연결 종료
+     * 6. 타이머 취소
+     * 7. 액세서리 목록 초기화
+     * 8. 액세서리 연결 목록 초기화
+     * 9. 액세서리 연결 해제
      */
     public boolean onStop() {
 //        this.mView.unregisterListener(this);
 //        this.mDialogsEventBus.unregisterListener(this);
         log(LoggerHelper.LogEvent.LOG_EVENT_DEMO_STOP);
 
+        for (Accessory accessory : this.mAccessoriesList) {
+            log(LoggerHelper.LogEvent.LOG_EVENT_BLE_DEV_DISCONNECTED, accessory);
+        }
+        boolean isBleClose = bleClose();
+        boolean isUwbClose = uwbClose();
+        cancelTimerBleConnect();
+        cancelTimerAccessoriesLegacyOoBSupport();
+        this.mAccessoriesList.clear();
+        this.mAccessoriesConnectingList.clear();
+        bleStopDeviceScan();
+
         this.onUpdate = null;
         this.onDisconnect = null;
 
-        return bleStopDeviceScan();
+        return isBleClose && isUwbClose;
     }
 
 

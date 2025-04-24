@@ -75,7 +75,7 @@ public class PreferenceStorageHelper {
     }
 
     public boolean getLogsEnabled() {
-        return this.mContext.getSharedPreferences(PREFS_NAME_UWB, 0).getBoolean(PREF_LOGSENABLED_KEY, false);
+        return this.mContext.getSharedPreferences(PREFS_NAME_UWB, 0).getBoolean(PREF_LOGSENABLED_KEY, true);
     }
 
     public void setUwbChannel(int i) {
