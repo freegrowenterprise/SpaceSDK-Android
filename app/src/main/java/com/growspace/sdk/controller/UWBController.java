@@ -202,6 +202,7 @@ public class UWBController implements
      */
     @Override
     public void onRangingCapabilities(RangingCapabilities rangingCapabilities) {
+        Log.e("UWB !!", "onRangingCapabilities: " + rangingCapabilities);
     }
 
     /**

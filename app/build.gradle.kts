@@ -1,7 +1,9 @@
+import com.vanniktech.maven.publish.SonatypeHost
+
 plugins {
     id("com.android.library")
     id("org.jetbrains.kotlin.android")
-    id("maven-publish") // ✅ Maven Publish 추가
+    id("com.vanniktech.maven.publish")
 }
 
 android {
@@ -43,16 +45,38 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("release") {
-            groupId = "com.growspace.sdk"  // ✅ 패키지 그룹 ID
-            artifactId = "growspacesdk"   // ✅ 라이브러리 이름
-            version = "1.0.0"             // ✅ 버전
 
-            afterEvaluate {
-                from(components["release"]) // ✅ 릴리즈 AAR 파일 가져오기
+mavenPublishing {
+    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+
+    signAllPublications()
+
+    coordinates("io.github.freegrowenterprise", "SpaceSDK-Android", "0.0.1")
+
+    pom {
+        name = "SpaceSDK-Android"
+        description = "SpaceSDK-Android"
+        url = "https://github.com/freegrowenterprise/SpaceSDK-Android"
+        inceptionYear = "2025"
+
+        licenses {
+            license {
+                name = "The Apache License, Version 2.0"
+                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
             }
+        }
+        developers {
+            developer {
+                id = "MMMIIIN"
+                name = "MMMIIIN"
+                url = "https://github.com/MMMIIIN"
+            }
+        }
+
+        scm {
+            connection = "scm:git:github.com/freegrowenterprise/SpaceSDK-Android.git"
+            developerConnection.set("scm:git:ssh://github.com:freegrowenterprise/SpaceSDK-Android.git")
+            url = "https://github.com/freegrowenterprise/SpaceSDK-Android/tree/master"
         }
     }
 }
