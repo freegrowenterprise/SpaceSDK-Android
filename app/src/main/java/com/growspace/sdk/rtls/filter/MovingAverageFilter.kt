@@ -3,7 +3,7 @@ package com.growspace.sdk.rtls.filter
 import com.growspace.sdk.model.RtlsLocation
 import java.util.LinkedList
 
-class MovingAverageFilter(private val windowSize: Int = 5) : RtlsFilter {
+class MovingAverageFilter(private val windowSize: Int = 10) : RtlsFilter {
 
     private val xWindow = LinkedList<Double>()
     private val yWindow = LinkedList<Double>()
