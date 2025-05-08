@@ -45,13 +45,26 @@ dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }
 
+//publishing {
+//    publications {
+//        create<MavenPublication>("release") {
+//            groupId = "com.growspace.sdk"  // ✅ 패키지 그룹 ID
+//            artifactId = "growspacesdk"   // ✅ 라이브러리 이름
+//            version = "1.0.0"             // ✅ 버전
+//
+//            afterEvaluate {
+//                from(components["release"]) // ✅ 릴리즈 AAR 파일 가져오기
+//            }
+//        }
+//    }
+//}
 
 mavenPublishing {
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
 
     signAllPublications()
 
-    coordinates("io.github.freegrowenterprise", "SpaceSDK-Android", "0.0.1")
+    coordinates("io.github.freegrowenterprise", "SpaceSDK-Android", "0.0.2")
 
     pom {
         name = "SpaceSDK-Android"
