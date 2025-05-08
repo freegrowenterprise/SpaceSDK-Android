@@ -9,9 +9,14 @@ import com.growspace.sdk.bluetooth.BluetoothLEManagerHelper
 import com.growspace.sdk.controller.UWBController
 import com.growspace.sdk.location.LocationManagerHelper
 import com.growspace.sdk.logger.LoggerHelper
+import com.growspace.sdk.model.RtlsLocation
+import com.growspace.sdk.model.UwbAnchor
 import com.growspace.sdk.model.UwbDisconnect
 import com.growspace.sdk.model.UwbRange
 import com.growspace.sdk.permissions.PermissionHelper
+import com.growspace.sdk.rtls.RtlsProcessor
+import com.growspace.sdk.rtls.filter.RtlsFilterFactory
+import com.growspace.sdk.rtls.filter.RtlsFilterType
 import com.growspace.sdk.storage.preferences.PreferenceStorageHelper
 import com.growspace.sdk.uwb.UwbManagerHelper
 import kotlinx.coroutines.CoroutineScope
@@ -19,7 +24,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -140,5 +144,63 @@ class SpaceUwb(
 
     fun exportLogsTxt() {
         loggerHelper.exportLogsTxt()
+    }
+
+    fun startUwbRtls(
+        anchorPositionMap: Map<String, Triple<Double, Double, Double>>,  // ⬅️ 각 UWB 장치 ID에 대한 (x, y, z) 위치
+        zCorrection: Float = 1.0f,                                       // ⬅️ 기준 높이값 (예: 사용자의 z 좌표)
+        maximumConnectionCount: Int = 4,
+        replacementDistanceThreshold: Float = 8f,
+        isConnectStrongestSignalFirst: Boolean = true,
+        filterType: RtlsFilterType = RtlsFilterType.NONE,
+        onResult: (RtlsLocation) -> Unit,
+        onFail: (String) -> Unit
+    ) {
+        // 최근 거리 측정값과 수신 시간을 저장
+        val anchorDistances = mutableMapOf<String, Pair<Float, Long>>()
+
+        val filter = RtlsFilterFactory.create(filterType)
+
+        // 먼저 기존 UWB 작업 중지
+        stopUwbRanging {
+            uwbScope.launch {
+                delay(1000)
+
+                uWBController.onStart(
+                    maximumConnectionCount,
+                    replacementDistanceThreshold,
+                    isConnectStrongestSignalFirst,
+                    { range ->
+                        val id = range.deviceName
+                        val distance = range.distance
+                        val timestamp = System.currentTimeMillis()
+
+                        anchorDistances[id] = distance to timestamp
+
+                        val now = System.currentTimeMillis()
+                        val anchors = anchorDistances
+                            .filter { now - it.value.second <= 1000 }
+                            .mapNotNull { (id, pair) ->
+                                anchorPositionMap[id]?.let { (x, y, z) ->
+                                    UwbAnchor(x = x, y = y, z = z, distance = pair.first)
+                                }
+                            }
+
+                        val processor = RtlsProcessor()
+                        val result = processor.processAnchors(anchors, zCorrection)
+                        val filtered = result?.let{filter.filter(it)}
+
+                        if (result != null) {
+                            onResult(filtered ?: result)
+                        } else {
+                            onFail("위치 계산 실패 (anchor 부족 또는 계산 불가)")
+                        }
+                    },
+                    { disconnect ->
+                        anchorDistances.remove(disconnect.deviceName)
+                    }
+                )
+            }
+        }
     }
 }
