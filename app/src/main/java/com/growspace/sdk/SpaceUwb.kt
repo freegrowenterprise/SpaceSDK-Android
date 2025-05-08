@@ -38,7 +38,7 @@ class SpaceUwb(
     // UWB 작업을 위한 코루틴 스코프 설정
     // IO 디스패처를 사용하여 백그라운드 작업을 처리
     private val uwbScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    
+
     // 현재 실행 중인 UWB 작업을 추적하는 Job 객체
     private var uwbJob: Job? = null
 
@@ -147,14 +147,15 @@ class SpaceUwb(
     }
 
     fun startUwbRtls(
-        anchorPositionMap: Map<String, Triple<Double, Double, Double>>,  // ⬅️ 각 UWB 장치 ID에 대한 (x, y, z) 위치
-        zCorrection: Float = 1.0f,                                       // ⬅️ 기준 높이값 (예: 사용자의 z 좌표)
+        anchorPositionMap: Map<String, Triple<Double, Double, Double>>,
+        zCorrection: Float = 1.0f,
         maximumConnectionCount: Int = 4,
         replacementDistanceThreshold: Float = 8f,
         isConnectStrongestSignalFirst: Boolean = true,
         filterType: RtlsFilterType = RtlsFilterType.NONE,
         onResult: (RtlsLocation) -> Unit,
-        onFail: (String) -> Unit
+        onFail: (String) -> Unit,
+        onDeviceRanging: (Map<String, Float>) -> Unit = {}
     ) {
         // 최근 거리 측정값과 수신 시간을 저장
         val anchorDistances = mutableMapOf<String, Pair<Float, Long>>()
@@ -185,10 +186,12 @@ class SpaceUwb(
                                     UwbAnchor(x = x, y = y, z = z, distance = pair.first)
                                 }
                             }
+                        val distanceMap: Map<String, Float> = anchorDistances.mapValues { it.value.first }
+                        onDeviceRanging(distanceMap)
 
                         val processor = RtlsProcessor()
                         val result = processor.processAnchors(anchors, zCorrection)
-                        val filtered = result?.let{filter.filter(it)}
+                        val filtered = result?.let { filter.filter(it) }
 
                         if (result != null) {
                             onResult(filtered ?: result)
