@@ -64,7 +64,7 @@ mavenPublishing {
 
     signAllPublications()
 
-    coordinates("io.github.freegrowenterprise", "SpaceSDK-Android", "0.0.2")
+    coordinates("io.github.freegrowenterprise", "SpaceSDK-Android", "0.0.3")
 
     pom {
         name = "SpaceSDK-Android"
