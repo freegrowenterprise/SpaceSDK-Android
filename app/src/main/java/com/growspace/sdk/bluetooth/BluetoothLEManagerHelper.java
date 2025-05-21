@@ -76,13 +76,13 @@ public class BluetoothLEManagerHelper {
     private final Context mContext;
     
     // 서비스 UUID - BLE 장치의 서비스 식별자
-    private static final UUID serviceUUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9E");
+    private static final UUID serviceUUID = UUID.fromString("6E400001-B5A3-F393-E0A9-E50E24DCCA9F");
     
     // 수신(RX) 특성 UUID - 데이터 수신을 위한 특성 식별자
-    private static final UUID rxCharacteristicUUID = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
+    private static final UUID rxCharacteristicUUID = UUID.fromString("6E400002-B5A3-F393-E0A9-E50E24DCCA9F");
     
     // 송신(TX) 특성 UUID - 데이터 송신을 위한 특성 식별자
-    private static final UUID txCharacteristicUUID = UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
+    private static final UUID txCharacteristicUUID = UUID.fromString("6E400003-B5A3-F393-E0A9-E50E24DCCA9F");
     
     // 디스크립터 UUID - 특성의 속성을 정의하는 디스크립터 식별자
     private static final UUID descriptorUUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
