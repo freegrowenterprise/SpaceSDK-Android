@@ -14,7 +14,6 @@ SDK 사용자는 단일 클래스 `SpaceUwb`를 통해 복잡한 연결 흐름 �
 dependencies {
     implementation("io.github.freegrowenterprise:SpaceSDK-Android:0.0.3")
 }
-
 ```
 
 ---
