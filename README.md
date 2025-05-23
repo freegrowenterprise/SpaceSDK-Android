@@ -1,6 +1,6 @@
-# 📡 SpaceUwb Android SDK
+# 📡 SpaceSDK-Android
 
-**SpaceUwb**는 FREEGROW Inc.의 UWB 기반 Android SDK로, BLE 장치 검색, 거리 측정, 방향 계산, RTLS 실시간 위치 추정 기능을 제공합니다.  
+**SpaceSDK**는 FREEGROW Inc.의 UWB 기반 Android SDK로 거리 측정, 방향 계산, RTLS 실시간 위치 추정 기능을 제공합니다.  
 SDK 사용자는 단일 클래스 `SpaceUwb`를 통해 복잡한 연결 흐름 없이 UWB 기능을 간편하게 활용할 수 있습니다.
 
 ---
