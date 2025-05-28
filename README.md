@@ -1,14 +1,13 @@
 # 📡 SpaceSDK-Android
 
-**SpaceSDK**는 FREEGROW Inc.의 UWB 기반 Android SDK로 거리 측정, 방향 계산, RTLS 실시간 위치 추정 기능을 제공합니다.  
-SDK 사용자는 단일 클래스 `SpaceUwb`를 통해 복잡한 연결 흐름 없이 UWB 기능을 간편하게 활용할 수 있습니다.
+**SpaceSDK** is a UWB-based Android SDK developed by **FREEGROW Inc.**, providing features such as distance measurement, direction calculation, and real-time RTLS (location estimation).  
+With a single class `SpaceUwb`, developers can easily utilize UWB functionality without dealing with complex connection workflows.
 
 ---
 
+## 📦 Installation
 
-## 📦 설치 방법
-
-**Gradle 설정 예시**
+**Gradle setup example:**
 
 ```groovy
 dependencies {
@@ -18,23 +17,25 @@ dependencies {
 
 ---
 
-## ✅ 주요 기능
-
-- BLE + UWB 기반 거리 측정 (Ranging)
-- RTLS 기반 위치 추정 (x, y, z 계산)
-- 실시간 디바이스 연결/해제 콜백
-
----
-
-## 🔧 요구 사항
-- [UWB 지원 Android 휴대폰](https://blog.naver.com/growdevelopers/223812647964)
-- Android 14 (API 34) 이상
-- Kotlin 1.9.22 (권장)
-- 실제 UWB 디바이스 **(Grow Space UWB 제품)**
+## ✅ Key Features
+- BLE + UWB-based distance measurement (Ranging)
+- RTLS-based real-time location estimation (x, y, z)
+- Real-time device connection/disconnection callbacks
 
 ---
 
-## 📑 Android 권한 설정
+## 🔧 Requirements
+- [UWB-supported Android device](https://blog.naver.com/growdevelopers/223812647964)
+- Android 14 (API 34) or later
+- Kotlin 1.9.22 (recommended)
+- Physical UWB device (Grow Space UWB product)
+
+---
+
+## 📑 Android Permission Configuration
+
+Add the following to your AndroidManifest.xml:
+
 ```xml
 <uses-permission android:name="android.permission.BLUETOOTH" />
 <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -48,13 +49,13 @@ dependencies {
 
 ---
 
-## 🧱 초기화
+## 🧱 Initialization
 
 ```kotlin
 val spaceUwb = SpaceUwb(context = applicationContext, activity = this)
 ```
 
-## 🚀 거리 측정 시작
+## 🚀 Start Ranging
 ```kotlin
 spaceUwb.startUwbRanging(
     maximumConnectionCount = 4,
@@ -64,26 +65,26 @@ spaceUwb.startUwbRanging(
         Log.d("UWB", "deviceName: ${result.deviceName} distance: ${result.distance}m, azimuth: ${result.azimuth}, elevation: ${result.elevation}")
     },
     onDisconnect = { disconnect ->
-        Log.w("UWB", "❌ 연결 해제: ${disconnect.deviceName}")
+        Log.w("UWB", "❌ Disconnected: ${disconnect.deviceName}")
     }
 )
 ```
 
-## 🛑 거리 측정 중지
+## 🛑 Stop Ranging
 ```kotlin
 spaceUwb.stopUwbRanging { result ->
     if (result.isSuccess) {
-        Log.i("UWB", "✅ 거리 측정 종료")
+        Log.i("UWB", "✅ Ranging stopped")
     } else {
-        Log.e("UWB", "❌ 종료 실패: ${result.exceptionOrNull()?.message}")
+        Log.e("UWB", "❌ Failed to stop ranging: ${result.exceptionOrNull()?.message}")
     }
 }
 ```
 
-## 📍 RTLS 위치 추정
+## 📍 RTLS Location Estimation
 ```kotlin
 val anchorMap = mapOf(
-    // BLE 장치명 기준. 예: UWB 장치 이름이 FGU-0001로 광고되는 경우
+    // Based on BLE device names (e.g., UWB device advertises as FGU-0001)
     "FGU-0001" to Triple(0.0, 0.0, 0.0),
     "FGU-0002" to Triple(5.0, 0.0, 0.0),
     "FGU-0003" to Triple(0.0, 5.0, 0.0)
@@ -97,10 +98,10 @@ spaceUwb.startUwbRtls(
     isConnectStrongestSignalFirst = true,
     filterType = RtlsFilterType.AVERAGE,
     onResult = { location ->
-        Log.d("RTLS", "📍 위치: x=${location.x}, y=${location.y}, z=${location.z}")
+        Log.d("RTLS", "📍 Location: x=${location.x}, y=${location.y}, z=${location.z}")
     },
     onFail = { reason ->
-        Log.e("RTLS", "❌ 위치 추정 실패: $reason")
+        Log.e("RTLS", "❌ Location estimation failed: $reason")
     },
     onDeviceRanging = { distanceMap ->
         distanceMap.forEach { (id, distance) ->
@@ -112,11 +113,10 @@ spaceUwb.startUwbRtls(
 
 ---
 
-### 📱 테스트 앱 안내
+### 📱 Test App
 
-본 SDK를 활용한 공식 테스트 앱이 아래 경로에 공개되어 있습니다.
-
-실제 디바이스와 연동하여 UWB 거리 측정 및 RTLS 위치 추정 기능을 직접 체험할 수 있습니다.	
+An official test app built with this SDK is publicly available at the links below.
+It allows you to try out UWB ranging and RTLS features with actual devices.
 
 [GitHub](https://github.com/freegrowenterprise/SpaceSDK-Android-TestApp)
 
@@ -124,16 +124,17 @@ spaceUwb.startUwbRtls(
 
  ---
 
-## 🏢 제작
+## 🏢 Developed by
 
 **FREEGROW Inc.**  
-실내 측위와 근거리 무선 통신 기술을 바탕으로 한 UWB 솔루션을 개발하고 있습니다.
+We specialize in indoor positioning and ultra-wideband (UWB) communication technologies to enable intelligent spatial awareness solutions.
+
 
 ---
 
-## 📫 문의
+## 📫 Contact
 
-기술 문의나 개선 제안은 아래 메일로 연락주세요.
+For technical support or suggestions, feel free to contact us:
 
 📮 contact@freegrow.io
 
