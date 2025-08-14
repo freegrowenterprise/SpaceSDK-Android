@@ -60,6 +60,7 @@ val spaceUwb = SpaceUwb(context = applicationContext, activity = this)
 spaceUwb.startUwbRanging(
     maximumConnectionCount = 4,
     replacementDistanceThreshold = 8f,
+    delayDisconnectSecLimit = 5,
     isConnectStrongestSignalFirst = true,
     onUpdate = { uwbRange ->
         Log.d("UWB", "deviceName: ${result.deviceName} distance: ${result.distance}m, azimuth: ${result.azimuth}, elevation: ${result.elevation}")
