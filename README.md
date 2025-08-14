@@ -11,7 +11,7 @@ With a single class `SpaceUwb`, developers can easily utilize UWB functionality 
 
 ```groovy
 dependencies {
-    implementation("io.github.freegrowenterprise:SpaceSDK-Android:0.0.7")
+    implementation("io.github.freegrowenterprise:SpaceSDK-Android:0.0.10")
 }
 ```
 
